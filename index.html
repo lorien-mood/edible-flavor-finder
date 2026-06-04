@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edible Flavor Finder | Mood</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Edible Flavor Finder | Mood Widget Design System
+       Deployment notes:
+       - Host on GitHub Pages; add an empty .nojekyll file to the
+         repo root so Jekyll does not strip <style>/<script> blocks.
+       - ⚠️ Every THC amount and price marked [VERIFY] in the DATA
+         object below must be confirmed live on mood.com before
+         this widget is deployed.
+       ============================================================ */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: transparent;
+      color: #4A5D53;
+      padding: 12px;
+    }
+
+    .widget-wrapper { max-width: 580px; margin: 0 auto; }
+
+    .widget-card {
+      background: #FFFFFF;
+      border-radius: 20px;
+      border: 1px solid rgba(27, 58, 47, 0.08);
+      box-shadow: 0 4px 24px rgba(27, 58, 47, 0.06);
+      padding: 28px 26px;
+    }
+
+    .widget-header { text-align: center; margin-bottom: 22px; }
+
+    .widget-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 22px;
+      color: #1B3A2F;
+      margin-bottom: 6px;
+    }
+
+    .widget-header p { font-size: 13px; color: #7A8B82; }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #A0ADA6;
+      margin: 18px 0 10px;
+    }
+
+    .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .pill {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 13.5px;
+      color: #1B3A2F;
+      background: #F8F6F2;
+      border: 1px solid rgba(27, 58, 47, 0.08);
+      border-radius: 20px;
+      padding: 9px 16px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pill:hover { border-color: rgba(27, 58, 47, 0.25); transform: translateY(-1px); }
+
+    .pill.active {
+      background: rgba(27, 58, 47, 0.08);
+      border-color: #1B3A2F;
+      color: #1B3A2F;
+    }
+
+    /* Experience-level color grading: green -> gold -> amber */
+    .pill.active[data-level="new"] { border-color: #2A5C47; box-shadow: inset 0 0 0 1px #2A5C47; }
+    .pill.active[data-level="occasional"] { border-color: #D4A04A; box-shadow: inset 0 0 0 1px #D4A04A; }
+    .pill.active[data-level="experienced"] { border-color: #A66B2E; box-shadow: inset 0 0 0 1px #A66B2E; }
+
+    .results { margin-top: 22px; }
+
+    .result-card {
+      background: #F8F6F2;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 12px;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: rise 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .result-card:nth-child(2) { animation-delay: 0.08s; }
+
+    @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+    .result-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+
+    .result-name {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 17px;
+      color: #1B3A2F;
+      line-height: 1.3;
+    }
+
+    .level-dot {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #7A8B82;
+      white-space: nowrap;
+      padding-top: 3px;
+    }
+
+    .level-dot span { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot-new span { background: #2A5C47; }
+    .dot-occasional span { background: #D4A04A; }
+    .dot-experienced span { background: #A66B2E; }
+
+    .result-notes { font-size: 14px; line-height: 1.55; margin: 8px 0 12px; }
+
+    .result-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+
+    .meta-chip {
+      background: #FFFFFF;
+      border: 1px solid rgba(27, 58, 47, 0.08);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #1B3A2F;
+      padding: 5px 12px;
+    }
+
+    .shop-btn {
+      display: inline-block;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 13.5px;
+      color: #F8F6F2;
+      background: #1B3A2F;
+      border-radius: 20px;
+      padding: 10px 22px;
+      text-decoration: none;
+      transition: background 0.3s ease, transform 0.3s ease;
+    }
+
+    .shop-btn:hover { background: #2A5C47; transform: translateY(-1px); }
+
+    .placeholder {
+      text-align: center;
+      font-size: 13.5px;
+      color: #A0ADA6;
+      background: #F8F6F2;
+      border-radius: 12px;
+      padding: 22px 16px;
+      margin-top: 22px;
+    }
+
+    .disclaimer {
+      font-size: 11px;
+      color: #A0ADA6;
+      text-align: center;
+      line-height: 1.5;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 420px) {
+      .widget-card { padding: 20px 16px; }
+      .widget-header h2 { font-size: 19px; }
+      .pill { font-size: 12.5px; padding: 8px 13px; }
+      .result-name { font-size: 15.5px; }
+      .result-notes { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-wrapper">
+    <div class="widget-card">
+      <div class="widget-header">
+        <h2>Edible Flavor Finder</h2>
+        <p>Tell Mood what you crave and get a matched treat</p>
+      </div>
+
+      <div class="step-label">Step 1 &middot; What are you craving?</div>
+      <div class="pill-group" id="flavorGroup">
+        <button class="pill" data-flavor="bakery">Chocolate &amp; Bakery</button>
+        <button class="pill" data-flavor="fruity">Fruity &amp; Sour</button>
+        <button class="pill" data-flavor="sweetsalty">Sweet &amp; Salty</button>
+        <button class="pill" data-flavor="gummy">Classic Gummy</button>
+        <button class="pill" data-flavor="different">Something Different</button>
+      </div>
+
+      <div class="step-label">Step 2 &middot; Your experience level</div>
+      <div class="pill-group" id="levelGroup">
+        <button class="pill" data-level="new">New to edibles</button>
+        <button class="pill" data-level="occasional">Occasional</button>
+        <button class="pill" data-level="experienced">Experienced</button>
+      </div>
+
+      <div class="results" id="results">
+        <div class="placeholder">Pick a craving and an experience level to see your match.</div>
+      </div>
+
+      <p class="disclaimer">All Mood products are intended for adults 21 and older. THC from edibles can show up on a drug test. Product availability varies by state.</p>
+    </div>
+  </div>
+
+  <script>
+    // ================================================================
+    // DATA — mirrors the static fallback table in the article.
+    // ⚠️ [VERIFY]: confirm every THC amount and price on mood.com
+    // before deployment, then replace the placeholder strings.
+    // ================================================================
+    var DATA = {
+      bakery: {
+        new: [{
+          name: "Andy's THC Brownie Bites",
+          notes: "Fudgy and rich with real cocoa and a sea salt finish. The balanced THC and CBD blend keeps the experience smooth and gentle.",
+          thc: "[VERIFY] mg per bite",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/andys-thc-brownie-bites"
+        }],
+        occasional: [{
+          name: "Andy's THC Chocolate Chip Cookie",
+          notes: "Soft-baked, buttery, and nostalgic, with a solid Delta-9 THC amount for a relaxed evening.",
+          thc: "[VERIFY] mg per cookie",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/andys-thc-chocolate-chip-cookie"
+        }, {
+          name: "Andy's THC Snickerdoodle Cookie",
+          notes: "Warm cinnamon sugar comfort, sweet without being heavy.",
+          thc: "[VERIFY] mg per cookie",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/andys-thc-snickerdoodle-cookie"
+        }],
+        experienced: [{
+          name: "Andy's THC Marshmallow Treat",
+          notes: "Gooey, chewy crispy-treat nostalgia with a generous THC amount built for experienced users.",
+          thc: "[VERIFY] mg per treat",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/andys-thc-marshmallow-treat"
+        }]
+      },
+      fruity: {
+        new: [{
+          name: "THC + CBD Fruity Taffy",
+          notes: "Bright fruit flavors in a soft chew, with CBD balancing the THC for a mellow first experience.",
+          thc: "[VERIFY] mg per piece",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-cbd-fruity-taffy"
+        }],
+        occasional: [{
+          name: "THC Peach Rings",
+          notes: "Juicy peach sweetness with a classic sugared chew.",
+          thc: "[VERIFY] mg per ring",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-peach-rings"
+        }, {
+          name: "THC Watermelon Rings",
+          notes: "Bright, summery watermelon flavor that never goes out of style.",
+          thc: "[VERIFY] mg per ring",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-watermelon-rings"
+        }],
+        experienced: [{
+          name: "Delta-9 THC Sour Rainbow Belts",
+          notes: "Sweet fruit up front, tangy sour finish, dusted in sour sugar. A customer favorite for flavor.",
+          thc: "[VERIFY] mg per belt",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-sour-rainbow-belts"
+        }]
+      },
+      sweetsalty: {
+        new: [{
+          name: "THC Butter Cream Caramels",
+          notes: "Soft, rich, and slow to melt. One small, luxurious bite makes portioning easy.",
+          thc: "[VERIFY] mg per caramel",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-butter-cream-caramels"
+        }],
+        occasional: [{
+          name: "THC Caramel Popcorn",
+          notes: "Crunchy popcorn coated in buttery caramel for the ideal savory-sweet balance. Portion it out rather than snacking from the bag.",
+          thc: "[VERIFY] mg per bag",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-caramel-popcorn"
+        }],
+        experienced: [{
+          name: "THC Chocolate Popcorn",
+          notes: "Chocolate-drizzled popcorn with a substantial total THC amount per bag.",
+          thc: "[VERIFY] mg per bag",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-chocolate-popcorn"
+        }, {
+          name: "THC Cotton Candy Popcorn",
+          notes: "Carnival-inspired flavor that doubles as snack and entertainment.",
+          thc: "[VERIFY] mg per bag",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-cotton-candy-popcorn"
+        }]
+      },
+      gummy: {
+        new: [{
+          name: "Micro-Dose Delta-9 THC Gummies",
+          notes: "Three bright fruit flavors with a gentle 5mg THC amount per gummy. The classic starting point.",
+          thc: "5mg Delta-9 THC [VERIFY]",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/micro-dose-delta-9-thc-gummies"
+        }],
+        occasional: [{
+          name: "15mg Delta-9 THC Gummies",
+          notes: "Fruit-forward flavor at the popular standard strength.",
+          thc: "15mg Delta-9 THC",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/15mg-delta-9-thc-gummies"
+        }, {
+          name: "Epic Euphoria THC Gummies",
+          notes: "A fruity base with functional mushrooms and botanicals layered in.",
+          thc: "[VERIFY] mg per gummy",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/epic-euphoria-thc-gummies"
+        }],
+        experienced: [{
+          name: "30mg Delta-9 THC Gummies",
+          notes: "The same fruit-forward flavors at a stronger THC amount for seasoned users.",
+          thc: "30mg Delta-9 THC",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/30mg-delta-9-thc-gummies"
+        }]
+      },
+      different: {
+        new: [{
+          name: "Sleepytime THC Hot Cocoa",
+          notes: "Rich chocolate flavor in a cozy mug, built to help you wind down at night.",
+          thc: "[VERIFY] mg per serving",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/sleepytime-hot-cocoa"
+        }],
+        occasional: [{
+          name: "Delta-9 THC Freezer Pops",
+          notes: "Nine fruity flavors, frozen and refreshing. A pool-day favorite.",
+          thc: "[VERIFY] mg per pop",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-freezer-pops"
+        }],
+        experienced: [{
+          name: "THC Crunch Gummies",
+          notes: "A crispy texture twist on the classic gummy for snackers who want something different.",
+          thc: "[VERIFY] mg per gummy",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/delta-9-thc-crunch-gummies"
+        }, {
+          name: "Gummy All-Stars",
+          notes: "Mood's most popular gummy flavors collected in one variety pack.",
+          thc: "[VERIFY] mixed amounts",
+          price: "[VERIFY]",
+          url: "https://mood.com/product/gummy-all-stars"
+        }]
+      }
+    };
+
+    var LEVEL_LABELS = { new: "Gentle", occasional: "Moderate", experienced: "Strong" };
+
+    var state = { flavor: null, level: null };
+
+    function selectPill(group, btn, key, value) {
+      // Convert NodeList to Array for older-browser compatibility
+      var pills = Array.prototype.slice.call(group.querySelectorAll('.pill'));
+      pills.forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      state[key] = value;
+      render();
+    }
+
+    function render() {
+      var box = document.getElementById('results');
+      if (!state.flavor || !state.level) {
+        box.innerHTML = '<div class="placeholder">' +
+          (state.flavor || state.level ? 'One more pick to go.' : 'Pick a craving and an experience level to see your match.') +
+          '</div>';
+        postHeight();
+        return;
+      }
+      var matches = DATA[state.flavor][state.level];
+      var html = '';
+      matches.forEach(function (m) {
+        html +=
+          '<div class="result-card">' +
+            '<div class="result-top">' +
+              '<div class="result-name">' + m.name + '</div>' +
+              '<div class="level-dot dot-' + state.level + '"><span></span>' + LEVEL_LABELS[state.level] + '</div>' +
+            '</div>' +
+            '<div class="result-notes">' + m.notes + '</div>' +
+            '<div class="result-meta">' +
+              '<span class="meta-chip">THC amount: ' + m.thc + '</span>' +
+              '<span class="meta-chip">Price: ' + m.price + '</span>' +
+            '</div>' +
+            '<a class="shop-btn" href="' + m.url + '" target="_blank" rel="noopener">Shop on Mood</a>' +
+          '</div>';
+      });
+      box.innerHTML = html;
+      postHeight();
+    }
+
+    // iframe height communication for the Shopify embed
+    function postHeight() {
+      window.setTimeout(function () {
+        try {
+          window.parent.postMessage({ type: 'mood-widget-height', height: document.body.scrollHeight }, '*');
+        } catch (e) { /* standalone view: ignore */ }
+      }, 60);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var flavorGroup = document.getElementById('flavorGroup');
+      var levelGroup = document.getElementById('levelGroup');
+
+      // Pass the event explicitly via closure-bound handlers (Safari/mobile safe)
+      Array.prototype.slice.call(flavorGroup.querySelectorAll('.pill')).forEach(function (btn) {
+        btn.addEventListener('click', function (event) {
+          selectPill(flavorGroup, event.currentTarget, 'flavor', event.currentTarget.getAttribute('data-flavor'));
+        });
+      });
+
+      Array.prototype.slice.call(levelGroup.querySelectorAll('.pill')).forEach(function (btn) {
+        btn.addEventListener('click', function (event) {
+          selectPill(levelGroup, event.currentTarget, 'level', event.currentTarget.getAttribute('data-level'));
+        });
+      });
+
+      postHeight();
+      window.addEventListener('resize', postHeight);
+    });
+  </script>
+</body>
+</html>
